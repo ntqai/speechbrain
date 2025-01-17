@@ -1309,6 +1309,74 @@ class AdditiveAngularMargin(AngularMargin):
         return self.scale * outputs
 
 
+class AddaptiveMarginArcface(AngularMargin):
+    """
+    An implementation of Additive Angular Margin (AAM) proposed
+    in the following paper: '''Margin Matters: Towards More Discriminative Deep
+    Neural Network Embeddings for Speaker Recognition'''
+    (https://arxiv.org/abs/1906.07317)
+
+    Arguments
+    ---------
+    margin : float
+        The margin for cosine similarity.
+    scale : float
+        The scale for cosine similarity.
+    beta : float
+        The decay scale for cosine similarity.
+    easy_margin : bool
+
+    Example
+    -------
+    >>> outputs = torch.tensor([ [1., -1.], [-1., 1.], [0.9, 0.1], [0.1, 0.9] ])
+    >>> targets = torch.tensor([ [1., 0.], [0., 1.], [ 1., 0.], [0.,  1.] ])
+    >>> pred = AdditiveAngularMargin()
+    >>> predictions = pred(outputs, targets)
+    >>> predictions[:,0] > predictions[:,1]
+    tensor([ True, False,  True, False])
+    """
+
+    def __init__(self, margin=0.0, scale=1.0, beta=0.5, easy_margin=False):
+        super().__init__(margin, scale)
+        self.easy_margin = easy_margin
+        self.beta = beta
+
+    def forward(self, outputs, targets):
+        """
+        Compute AAM between two tensors
+
+        Arguments
+        ---------
+        outputs : torch.Tensor
+            The outputs of shape [N, C], cosine similarity is required.
+        targets : torch.Tensor
+            The targets of shape [N, C], where the margin is applied for.
+
+        Returns
+        -------
+        predictions : torch.Tensor
+        """
+        cosine = outputs.float()
+        cosine = torch.clamp(cosine, -1 + 1e-7, 1 - 1e-7)
+        self.adaptive_margin = self.margin * torch.exp(-self.beta * cosine)
+        
+        # Calculate cos(m') and sin(m') for the adaptive margin
+        self.cos_m = torch.cos(self.adaptive_margin)
+        self.sin_m = torch.sin(self.adaptive_margin)
+        self.th = math.cos(math.pi - self.adaptive_margin)
+        self.mm = math.sin(math.pi - self.adaptive_margin) * self.adaptive_margin
+        
+        sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
+        phi = cosine * self.cos_m - sine * self.sin_m  # cos(theta + m')
+        if self.easy_margin:
+            phi = torch.where(cosine > 0, phi, cosine)
+        else:
+            phi = torch.where(cosine > self.th, phi, cosine - self.mm)
+        outputs = (targets * phi) + ((1.0 - targets) * cosine)
+        return self.scale * outputs
+
+
+
 class LogSoftmaxWrapper(nn.Module):
     """
     Arguments
