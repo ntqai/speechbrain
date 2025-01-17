@@ -1363,8 +1363,8 @@ class AddaptiveMarginArcface(AngularMargin):
         # Calculate cos(m') and sin(m') for the adaptive margin
         self.cos_m = torch.cos(self.adaptive_margin)
         self.sin_m = torch.sin(self.adaptive_margin)
-        self.th = math.cos(math.pi - self.adaptive_margin)
-        self.mm = math.sin(math.pi - self.adaptive_margin) * self.adaptive_margin
+        self.th = torch.cos(torch.pi - self.adaptive_margin)
+        self.mm = torch.sin(torch.pi - self.adaptive_margin) * self.adaptive_margin
         
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
         phi = cosine * self.cos_m - sine * self.sin_m  # cos(theta + m')

@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=2 torchrun  --rdzv_endpoint=localhost:29400 --nproc_per_node=1 train_speaker_embeddings.py ./hparams/train_ecapa_tdnn_emilia_w_adaptive_arcface.yaml
